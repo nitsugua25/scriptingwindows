@@ -1,5 +1,5 @@
 Import-Module ImportExcel
-$Path = "./Employes.xlsx"
+$Path = "./Employes.csv"
 $outputFile = "./Doublons.xlsx"
 
 $Users = $Path
@@ -8,7 +8,7 @@ foreach ($User in $Users) {
     $User = $User.SamAccountName
 
     if (Get-ADUser -Filter {SamAccountName -eq $User}) {
-        Write-Host "Exporting data to Excel..."
+        Write-Host "Exporting data to csv"
         $Data | Export-Excel -Path $outputFile -WorksheetName 'Doublons' -NoClobber:$false
     }
     else {
