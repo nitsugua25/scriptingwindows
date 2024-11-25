@@ -1,4 +1,3 @@
-Import-Module ImportExcel
 $Path = "./Employes.csv"
 $outputFile = "./Doublons.xlsx"
 
