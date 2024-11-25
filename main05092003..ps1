@@ -1,7 +1,8 @@
-$Path = "./Employes.csv"
+import-module ActiveDirectory
+
 $outputFile = "./Doublons.xlsx"
 
-$Users = $Path
+$Users = Import-Csv ./Employes.csv
 
 foreach ($User in $Users) {
     $User = $User.SamAccountName
