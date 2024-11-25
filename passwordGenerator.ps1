@@ -1,9 +1,9 @@
 function New-RandomPassword {
     param (
         [Parameter(Mandatory=$true)][int]$Length,
-        [Parameter(Mandatory=$false)][int]$Uppercase=1,
-        [Parameter(Mandatory=$false)][int]$Digits=1,
-        [Parameter(Mandatory=$false)][int]$SpecialCharacters=1
+        [Parameter(Mandatory=$false)][int]$Uppercase=0,
+        [Parameter(Mandatory=$false)][int]$Digits=0,
+        [Parameter(Mandatory=$false)][int]$SpecialCharacters=0
     )
     Begin {
         $Lowercase = $Length - $SpecialCharacters - $Uppercase - $Digits
