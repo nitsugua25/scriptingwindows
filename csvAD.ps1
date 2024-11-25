@@ -6,20 +6,45 @@ function Get-DomainFromDepartment {
         "*Ressources humaines*" { return "rh.lan" }
         "*R&D*" { return "rd.lan" }
         "*Marketting*" { return "marketing.lan" }
+        "*Marketing*" { return "marketing.lan" }
         "*Finances*" { return "finance.lan" }
         "*Technique*" { return "technique.lan" }
         "*Commerciaux*" { return "commercial.lan" }
         "*Informatique*" { return "it.lan" }
         "Direction" { return "direction.lan" }
-        default { return "belgique.lan" }
+        default { 
+            Write-Warning "Département non reconnu: $Departement"
+            return "belgique.lan" 
+        }
     }
 }
+
+# Fonction pour obtenir un UPN valide
+function Get-ValidUPN {
+    param(
+        [string]$FirstName,
+        [string]$LastName
+    )
+    
+    $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
+    
+    if ($baseUPN.Length -gt 20) {
+        Write-Warning "UPN trop long pour $FirstName $LastName : $baseUPN"
+        $baseUPN = $baseUPN.Substring(0, 20)
+    }
+    
+    return $baseUPN
+}
+
+# Initialisation des variables
+$usedUPNs = @{}
+$duplicates = @()
 
 # Première passe : vérifier tous les UPN potentiels
 foreach ($User in $Users) {
     $FirstName = $User.Prenom
     $LastName = $User.Nom
-    $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
+    $baseUPN = Get-ValidUPN -FirstName $FirstName -LastName $LastName
     $domain = Get-DomainFromDepartment -Departement $User.Departement
     
     if ($usedUPNs.ContainsKey($baseUPN)) {
@@ -30,6 +55,16 @@ foreach ($User in $Users) {
     }
 }
 
+# Écrire les doublons dans un fichier
+if ($duplicates.Count -gt 0) {
+    $duplicates | Out-File -FilePath ".\doublons_upn.txt"
+    Write-Host "Des doublons ont été trouvés et enregistrés dans doublons_upn.txt"
+}
+
+# Réinitialiser le compteur
+$usedUPNs.Clear()
+
+# Deuxième passe : création des utilisateurs
 foreach ($User in $Users) {
     $Displayname = "$($User.Prenom) $($User.Nom)"
     $UserFirstname = $User.Prenom
@@ -37,7 +72,7 @@ foreach ($User in $Users) {
     $OU = Get-OUPath -Departement $User.Departement
     
     # Générer l'UPN avec le bon domaine
-    $baseUPN = "$($UserFirstname.Substring(0,1)).$($UserLastname)".ToLower()
+    $baseUPN = Get-ValidUPN -FirstName $UserFirstname -LastName $UserLastname
     $domain = Get-DomainFromDepartment -Departement $User.Departement
     
     # Gérer les doublons d'UPN
