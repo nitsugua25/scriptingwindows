@@ -4,8 +4,8 @@ $outputFile = "./Doublons.xlsx"
 
 $Users = Import-Csv ./Employes.csv
 
-foreach ($User in $Users) {
-    $User = $User.SamAccountName
+foreach ($Employes in $Users) {
+    $User = $Employes.Login
 
     if (Get-ADUser -Filter {SamAccountName -eq $User}) {
         Write-Host "Exporting data to csv"
