@@ -1,6 +1,9 @@
 # --------------------------------------------
 # Script: CleanExcelToCSV_ReplaceDiacritics.ps1
-# Description: Replaces diacritics with base characters in every cell of an Excel file, ensuring the column order remains the same, then exports the cleaned data to a CSV file.
+# Description: Replaces diacritics with base characters in every cell of an Excel file,
+#              removes spaces and hyphens from "Nom" and "Prénom" columns,
+#              ensures the column order remains the same,
+#              and exports the cleaned data to a CSV file.
 # --------------------------------------------
 
 # Function to check PowerShell version
@@ -51,6 +54,19 @@ Function Replace-Diacritics {
     }
     # Normalize back to FormC to recompose characters
     return $sb.ToString().Normalize([Text.NormalizationForm]::FormC)
+}
+
+# Function to remove specific characters from a string
+Function Remove-SpecificCharacters {
+    param (
+        [string]$Text,
+        [string[]]$CharsToRemove
+    )
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $Text }
+    foreach ($char in $CharsToRemove) {
+        $Text = $Text -replace [regex]::Escape($char), ''
+    }
+    return $Text
 }
 
 # Main Script Execution
@@ -109,6 +125,9 @@ try {
         $headerMap[$originalHeaders[$i]] = $cleanHeaders[$i]
     }
 
+    # Define columns that require additional cleaning (remove spaces and hyphens)
+    $columnsToClean = @('Nom', 'Prenom')  # Use cleaned header names
+
     # Clean each cell in the dataset and create new objects with cleaned headers
     Write-Host "Processing data..." -ForegroundColor Cyan
     $cleanedData = foreach ($row in $Data) {
@@ -118,7 +137,12 @@ try {
             $cleanHeader = $headerMap[$originalHeader]
             $value = $row.$originalHeader
             if ($value -is [string]) {
+                # Replace diacritics
                 $cleanValue = Replace-Diacritics $value
+                # If the column is in $columnsToClean, remove spaces and hyphens
+                if ($columnsToClean -contains $cleanHeader) {
+                    $cleanValue = Remove-SpecificCharacters -Text $cleanValue -CharsToRemove @(" ", "-")
+                }
             } else {
                 $cleanValue = $value
             }
