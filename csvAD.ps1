@@ -26,11 +26,18 @@ function Get-ValidUPN {
         [string]$LastName
     )
     
-    $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
+    # D'abord essayer avec le prénom complet
+    $baseUPN = "$FirstName.$LastName".ToLower()
     
+    # Si plus long que 20 caractères, réduire au minimum (première lettre du prénom)
     if ($baseUPN.Length -gt 20) {
         Write-Warning "UPN trop long pour $FirstName $LastName : $baseUPN"
-        $baseUPN = $baseUPN.Substring(0, 20)
+        $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
+        
+        # Si toujours trop long, tronquer à 20 caractères
+        if ($baseUPN.Length -gt 20) {
+            $baseUPN = $baseUPN.Substring(0, 20)
+        }
     }
     
     return $baseUPN
