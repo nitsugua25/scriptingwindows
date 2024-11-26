@@ -1,137 +1,84 @@
-$Users = Import-Csv ".\output.csv"
+# Import du module AD
 Import-Module ActiveDirectory
 
 # Fonction pour obtenir le domaine basé sur le département
 function Get-DomainFromDepartment {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string]$Departement
     )
     
-    # Journalisation du département reçu
-    Write-Verbose "Traitement du département : $Departement"
-    
-    switch -Wildcard ($Departement) {
-        "*Ressources humaines*" { return "rh.lan" }
-        "*R&D*" { return "rd.lan" }
-        "*Marketting*" { return "marketing.lan" }
-        "*Marketing*" { return "marketing.lan" }
-        "*Finances*" { return "finance.lan" }
-        "*Technique*" { return "technique.lan" }
-        "*Commerciaux*" { return "commercial.lan" }
-        "*Informatique*" { return "it.lan" }
-        "Direction" { return "direction.lan" }
-        default { 
-            Write-Warning "Département non reconnu: $Departement"
-            return "belgique.lan" 
+    try {
+        # Base DN pour les OUs
+        $baseDN = "DC=belgique,DC=lan"
+        
+        switch -Wildcard ($Departement) {
+            "*Ressources humaines*" { return "OU=RH,$baseDN" }
+            "*R&D*" { return "OU=RD,$baseDN" }
+            "*Marketting*" { return "OU=Marketing,$baseDN" }
+            "*Marketing*" { return "OU=Marketing,$baseDN" }
+            "*Finances*" { return "OU=Finance,$baseDN" }
+            "*Technique*" { return "OU=Technique,$baseDN" }
+            "*Commerciaux*" { return "OU=Commercial,$baseDN" }
+            "*Informatique*" { return "OU=IT,$baseDN" }
+            "Direction" { return "OU=Direction,$baseDN" }
+            default { 
+                Write-Warning "Département non reconnu: $Departement"
+                return "OU=Users,$baseDN" 
+            }
         }
+    }
+    catch {
+        Write-Error "Erreur lors de la détermination du chemin OU : $_"
+        return "OU=Users,$baseDN"
     }
 }
 
-# Pour tester la fonction
+# Programme principal
 try {
-    $currentPath = Get-Location
-    Write-Host "Chemin actuel : $currentPath"
+    # Import du fichier CSV
+    Write-Host "Lecture du fichier CSV..."
+    $Users = Import-Csv -Path ".\output.csv" -Delimiter ";" -Encoding UTF8
     
-    # Exemple d'utilisation
-    $domain = Get-DomainFromDepartment -Departement "R&D"
-    Write-Host "Domaine trouvé : $domain"
+    foreach ($User in $Users) {
+        Write-Host "Traitement de l'utilisateur : $($User.Prenom) $($User.Nom)"
+        
+        try {
+            # Obtenir le chemin OU
+            $ouPath = Get-DomainFromDepartment -Departement $User.Departement
+            
+            # Créer les paramètres pour le nouvel utilisateur
+            $userParams = @{
+                Name = "$($User.Prenom) $($User.Nom)"
+                GivenName = $User.Prenom
+                Surname = $User.Nom
+                SamAccountName = $User.Login
+                UserPrincipalName = "$($User.Login)@belgique.lan"
+                Path = $ouPath
+                AccountPassword = (ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force)
+                Enabled = $true
+                ChangePasswordAtLogon = $true
+                Department = $User.Departement
+                Description = $User.Description
+                Office = $User.Bureau
+                EmployeeID = $User.Numero_Interne
+            }
+
+            # Créer l'utilisateur
+            New-ADUser @userParams
+            Write-Host "Utilisateur créé avec succès : $($User.Login)"
+        }
+        catch {
+            Write-Error "Erreur lors de la création de l'utilisateur $($User.Login) : $_"
+            continue
+        }
+    }
+    
+    Write-Host "Traitement terminé avec succès."
 }
 catch {
-    Write-Error "Erreur : $_"
-}
-# Fonction pour obtenir un UPN valide
-function Get-ValidUPN {
-    param(
-        [string]$FirstName,
-        [string]$LastName
-    )
-    
-    # D'abord essayer avec le prénom complet
-    $baseUPN = "$FirstName.$LastName".ToLower()
-    
-    # Si plus long que 20 caractères, réduire au minimum (première lettre du prénom)
-    if ($baseUPN.Length -gt 20) {
-        Write-Warning "UPN trop long pour $FirstName $LastName : $baseUPN"
-        $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
-        
-        # Si toujours trop long, tronquer à 20 caractères
-        if ($baseUPN.Length -gt 20) {
-            $baseUPN = $baseUPN.Substring(0, 20)
-        }
-    }
-    
-    return $baseUPN
-}
-
-# Initialisation des variables
-$usedUPNs = @{}
-$duplicates = @()
-
-# Première passe : vérifier tous les UPN potentiels
-foreach ($User in $Users) {
-    $FirstName = $User.Prenom
-    $LastName = $User.Nom
-    $baseUPN = Get-ValidUPN -FirstName $FirstName -LastName $LastName
-    $domain = Get-DomainFromDepartment -Departement $User.Departement
-    
-    if ($usedUPNs.ContainsKey($baseUPN)) {
-        $usedUPNs[$baseUPN]++
-        $duplicates += "Doublon trouvé: $FirstName $LastName -> $baseUPN$($usedUPNs[$baseUPN])@$domain"
-    } else {
-        $usedUPNs[$baseUPN] = 1
-    }
-}
-
-# Écrire les doublons dans un fichier
-if ($duplicates.Count -gt 0) {
-    $duplicates | Out-File -FilePath ".\doublons_upn.txt"
-    Write-Host "Des doublons ont été trouvés et enregistrés dans doublons_upn.txt"
-}
-
-# Réinitialiser le compteur
-$usedUPNs.Clear()
-
-# Deuxième passe : création des utilisateurs
-foreach ($User in $Users) {
-    $Displayname = "$($User.Prenom) $($User.Nom)"
-    $UserFirstname = $User.Prenom
-    $UserLastname = $User.Nom
-    $OU = Get-OUPath -Departement $User.Departement
-    
-    # Générer l'UPN avec le bon domaine
-    $baseUPN = Get-ValidUPN -FirstName $UserFirstname -LastName $UserLastname
-    $domain = Get-DomainFromDepartment -Departement $User.Departement
-    
-    # Gérer les doublons d'UPN
-    if ($usedUPNs.ContainsKey($baseUPN)) {
-        $counter = $usedUPNs[$baseUPN] + 1
-        $usedUPNs[$baseUPN] = $counter
-        $UPN = "$baseUPN$counter@$domain"
-        $SAM = "$baseUPN$counter"
-    } else {
-        $usedUPNs[$baseUPN] = 1
-        $UPN = "$baseUPN@$domain"
-        $SAM = $baseUPN
-    }
-    
-    $Description = $User.Description
-    $defaultPassword = "Changeme@123"
-
-    # Création de l'utilisateur
-    New-ADUser -Name "$Displayname" `
-               -DisplayName "$Displayname" `
-               -SamAccountName $SAM `
-               -UserPrincipalName $UPN `
-               -GivenName "$UserFirstname" `
-               -Surname "$UserLastname" `
-               -Description "$Description" `
-               -AccountPassword (ConvertTo-SecureString $defaultPassword -AsPlainText -Force) `
-               -Enabled $true `
-               -Path "$OU" `
-               -ChangePasswordAtLogon $true `
-               -PasswordNeverExpires $false `
-               -server $domain
-    
-    Write-Host "Créé utilisateur: $Displayname dans $OU avec UPN: $UPN"
+    Write-Error "Erreur générale : $_"
+    exit 1
 }
