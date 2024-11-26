@@ -193,6 +193,8 @@ try {
             New-ADUser -UserPrincipalName "$baseUPN@$UserUPNSuffix" -Name "$firstname $lastname" -GivenName $firstname -Surname $lastname -SamAccountName $baseUPN -DisplayName "$firstname $lastname" -Path $parsedDN -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) -Enabled $true -OtherAttributes @{'ipPhone' = $User.NInterne} -Description $User.Description -Office $User.Bureau
             Write-Host "Utilisateur $($User.Prenom) $($User.Nom) créé" 
             Add-Content -Path ".\passwords.txt" -Value "$baseUPN@$UserUPNSuffix : $password"
+
+            Add-AdGroupMember -Identity "GG-$GGName" -Members "$baseUPN@$UserUPNSuffix"
         } catch {
             Write-Error "Erreur lors de la création de l'utilisateur $baseUPN : $_"
         }
