@@ -12,7 +12,7 @@ function New-ADGG{
         $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
         if($null -eq $GG) {
             Write-Host "Création du groupe global $GGName"
-            New-ADGroup -Name "GG-$GGName" -GroupScope Global -Path "$BaseDN"
+            New-ADGroup "GG-$GGName" -GroupCategory Security -GroupScope Global -Path "$BaseDN"
         }
         else {
             Write-Host "Le groupe global $GGName existe déja."
