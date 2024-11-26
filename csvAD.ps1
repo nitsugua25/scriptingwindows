@@ -194,7 +194,7 @@ try {
             Write-Host "Utilisateur $($User.Prenom) $($User.Nom) créé" 
             Add-Content -Path ".\passwords.txt" -Value "$baseUPN@$UserUPNSuffix : $password"
 
-            Add-AdGroupMember -Identity "GG-$GGName" -Members "$baseUPN@$UserUPNSuffix"
+            Add-AdGroupMember -Identity "GG-$GGName" -Members "$baseUPN"
         } catch {
             Write-Error "Erreur lors de la création de l'utilisateur $baseUPN : $_"
         }
