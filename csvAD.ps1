@@ -1,4 +1,6 @@
-# Fonction pour obtenir le domaine basé sur le département
+$Users = Import-Csv ".\output.csv"
+Import-Module ActiveDirectory
+
 # Fonction pour obtenir le domaine basé sur le département
 function Get-DomainFromDepartment {
     param(
