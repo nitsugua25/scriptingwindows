@@ -1,7 +1,7 @@
 # Import du module AD
 Import-Module ActiveDirectory
 
-# Fonction pour obtenir le domaine basé sur le département
+# Fonction pour obtenir le chemin OU basé sur le département
 function Get-DomainFromDepartment {
     [CmdletBinding()]
     param(
@@ -47,14 +47,12 @@ function Get-DomainFromDepartment {
 
 # Programme principal
 try {
-    # Import du fichier CSV avec vérification
     Write-Host "Lecture du fichier CSV..."
     $Users = Import-Csv -Path ".\output.csv" -Delimiter ";" -Encoding UTF8
     
     foreach ($User in $Users) {
         Write-Host "`nTraitement de l'utilisateur : $($User.Prenom) $($User.Nom)"
         
-        # Vérification des données obligatoires
         if ([string]::IsNullOrWhiteSpace($User.Departement)) {
             Write-Warning "Département manquant pour $($User.Prenom) $($User.Nom)"
             continue
@@ -65,7 +63,8 @@ try {
             $ouPath = Get-DomainFromDepartment -Departement $User.Departement -Verbose
             Write-Host "OU Path : $ouPath"
             
-            # ... reste du code pour la création d'utilisateur ...
+            # Création de l'utilisateur dans AD
+            # ... code de création d'utilisateur ...
         }
         catch {
             Write-Error "Erreur lors de la création de l'utilisateur $($User.Login) : $_"
