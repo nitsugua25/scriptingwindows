@@ -12,7 +12,7 @@ function New-ADGG{
         $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
         if($null -eq $GG) {
             Write-Host "Création du groupe global $GGName"
-            New-ADGroup -Name "$GGName" -GroupScope Global -Path "$BaseDN"
+            New-ADGroup -Name "GG-$GGName" -GroupScope Global -Path "$BaseDN"
         }
         else {
             Write-Host "Le groupe global $GGName existe déja."
@@ -104,6 +104,7 @@ try {
     foreach ($User in $Users) {
         $parsedDN = ""
         $UserUPNSuffix = ""
+        $GGName = ""
 
         Write-Host "`nTraitement de l'utilisateur : $($User.Prenom) $($User.Nom)"
         Write-Host "Département : $($User.Departement)"
@@ -135,15 +136,15 @@ try {
                 $parsedDN = ("OU=" + $Departement[0] + ",DC=astral,DC=lan").Trim()
             }
 
-            switch -Wildcard ($User.Departement) {
-            "*Ressources humaines*" { $UserUPNSuffix = "rh.lan" }
-            "*R&D*" { $UserUPNSuffix = "r&d.lan" }
-            "*Marketing*" { $UserUPNSuffix = "marketing.lan" }
-            "*Finances*" { $UserUPNSuffix = "finance.lan" }
-            "*Technique*" { $UserUPNSuffix = "technique.lan" }
-            "*Commerciaux*" { $UserUPNSuffix = "commercial.lan" }
-            "*Informatique*" { $UserUPNSuffix = "it.lan" }
-            "Direction" { $UserUPNSuffix = "direction.lan" }
+            }switch -Wildcard ($User.Departement) {
+            "*Ressources humaines*" { $GGName = "Ressources-Humaines"; $UserUPNSuffix = "rh.lan" }
+            "*R&D*" { $GGName = "R&D" ; $UserUPNSuffix = "r&d.lan" }
+            "*Marketing*" { $GGName = "Marketing"; $UserUPNSuffix = "marketing.lan" }
+            "*Finances*" { $GGName = "Finances" ; $UserUPNSuffix = "finance.lan" }
+            "*Technique*" { $GGName = "Technique" ; $UserUPNSuffix = "technique.lan" }
+            "*Commerciaux*" { $GGName = "Commerciaux" ; $UserUPNSuffix = "commercial.lan" }
+            "*Informatique*" { $GGName = "Informatique" ; $UserUPNSuffix = "it.lan" }
+            "Direction" { $GGName = "Direction" ; $UserUPNSuffix = "direction.lan" }
             default { 
                 Write-Warning "Département non reconnu: '$Departement'"
                 $UserUPNSuffix = "belgique.lan"
