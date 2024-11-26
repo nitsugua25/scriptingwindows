@@ -1,6 +1,13 @@
 # Fonction pour obtenir le domaine basé sur le département
+# Fonction pour obtenir le domaine basé sur le département
 function Get-DomainFromDepartment {
-    param($Departement)
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Departement
+    )
+    
+    # Journalisation du département reçu
+    Write-Verbose "Traitement du département : $Departement"
     
     switch -Wildcard ($Departement) {
         "*Ressources humaines*" { return "rh.lan" }
@@ -19,6 +26,18 @@ function Get-DomainFromDepartment {
     }
 }
 
+# Pour tester la fonction
+try {
+    $currentPath = Get-Location
+    Write-Host "Chemin actuel : $currentPath"
+    
+    # Exemple d'utilisation
+    $domain = Get-DomainFromDepartment -Departement "R&D"
+    Write-Host "Domaine trouvé : $domain"
+}
+catch {
+    Write-Error "Erreur : $_"
+}
 # Fonction pour obtenir un UPN valide
 function Get-ValidUPN {
     param(
