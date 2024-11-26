@@ -1,6 +1,27 @@
 # Import du module AD
 Import-Module ActiveDirectory
+function New-ADGG{
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$GGName,
+        [Parameter(Mandatory=$true)]
+        [string]$BaseDN
+    )
 
+    try {
+        $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
+        if($null -eq $GG) {
+            Write-Host "Création du groupe global $GGName"
+            New-ADGroup -Name "$GGName" -GroupScope Global -Path "$BaseDN"
+        }
+        else {
+            Write-Host "Le groupe global $GGName existe déja."
+        }
+
+    } catch {
+        Write-Error "Erreur lors de la création du groupe global $GGName : $_"
+    }
+}
 function New-ADOU {
     param(
         [Parameter(Mandatory=$true)]
@@ -59,6 +80,11 @@ function New-RandomPassword {
 
 # Programme principal
 try {
+    New-ADOU -OUName "Groupes" -BaseDN "DC=astral,DC=lan"
+    New-ADOU -OUName "Groupes Globaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
+    New-ADOU -OUName "Groupes Locaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
+
+
     Write-Host "Lecture du fichier CSV..."
     $Users = Import-Csv -Path ".\output.csv" -Encoding UTF8
     $DepList = @()
@@ -91,6 +117,7 @@ try {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
                     New-ADOU -OUName $Departement[1] -BaseDN "DC=astral,DC=lan"
+                    New-ADGG -GGName $Departement[1] -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
                 }
 
                 if ($DepList -notcontains $Departement[0]) {
@@ -103,6 +130,7 @@ try {
                 if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
                     New-ADOU -OUName $Departement[0] -BaseDN "DC=astral,DC=lan"
+                    New-ADGG -GGName $Departement[0] -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
                 }
                 $parsedDN = ("OU=" + $Departement[0] + ",DC=astral,DC=lan").Trim()
             }
