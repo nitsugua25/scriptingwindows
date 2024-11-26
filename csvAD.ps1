@@ -196,7 +196,7 @@ try {
         } catch {
             Write-Error "Erreur lors de la création de l'utilisateur $baseUPN : $_"
         }
-    }
+
 } catch {
     Write-Error "Erreur générale : $_"
     exit 1
