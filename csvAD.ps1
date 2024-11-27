@@ -81,9 +81,9 @@ function New-RandomPassword {
 
 # Programme principal
 try {
-    New-ADOU -OUName "Groupes" -BaseDN "DC=astral,DC=lan"
-    New-ADOU -OUName "Groupes Globaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
-    New-ADOU -OUName "Groupes Locaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
+    New-ADOU -OUName "Groupes" -BaseDN "DC=belgique,DC=lan"
+    New-ADOU -OUName "Groupes Globaux" -BaseDN "OU=Groupes,DC=belgique,DC=lan"
+    New-ADOU -OUName "Groupes Locaux" -BaseDN "OU=Groupes,DC=belgique,DC=lan"
 
     Write-Host "Lecture du fichier CSV..."
     $Users = Import-Csv -Path ".\output.csv" -Encoding UTF8
@@ -116,52 +116,46 @@ try {
                 if ($DepList -notcontains $Departement[1]) {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
-                    New-ADOU -OUName $Departement[1] -BaseDN "DC=astral,DC=lan"
-                    New-ADGG -GGName "GG-$($Departement[1])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
+                    New-ADOU -OUName $Departement[1] -BaseDN "DC=belgique,DC=lan"
                 }
 
                 if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
-                    $baseDN = "OU=" + $Departement[1] + ",DC=astral,DC=lan".Trim()
+                    $baseDN = "OU=" + $Departement[1] + ",DC=belgique,DC=lan".Trim()
                     New-ADOU -OUName $Departement[0].Trim() -BaseDN $BaseDN
+                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
-                $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=astral,DC=lan").Trim()
+                $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=belgique,DC=lan").Trim()
             } else {
                 if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
-                    New-ADOU -OUName $Departement[0] -BaseDN "DC=astral,DC=lan"
-                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
+                    New-ADOU -OUName $Departement[0] -BaseDN "DC=belgique,DC=lan"
+                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
-                $parsedDN = ("OU=" + $Departement[0] + ",DC=astral,DC=lan").Trim()
+                $parsedDN = ("OU=" + $Departement[0] + ",DC=belgique,DC=lan").Trim()
             }
 
+            $GGName = "GG-$($Departement[0])"
             switch -Wildcard ($User.Departement) {
             "*Ressources humaines*" { 
-                $GGName="GG-ressources humaines"
                 $UserUPNSuffix = "rh.lan" 
             }
             "*R&D*" { 
-                $GGName="GG-r&d"
                 $UserUPNSuffix = "r&d.lan" 
             }
             "*Marketing*" { 
-                $GGName="GG-marketing"
                 $UserUPNSuffix = "marketing.lan" 
             }
             "*Finances*" { 
-                $GGName="GG-finances"
                 $UserUPNSuffix = "finance.lan" 
             }
             "*Technique*" { 
-                $GGName="GG-technique"
                 $UserUPNSuffix = "technique.lan" 
             }
             "*Commerciaux*" { 
-                $GGName="GG-commerciaux"
                 $UserUPNSuffix = "commercial.lan" 
             }
             "*Informatique*" { 
-                $GGName="GG-informatique"
                 $UserUPNSuffix = "it.lan" 
             }
             "Direction" { 
