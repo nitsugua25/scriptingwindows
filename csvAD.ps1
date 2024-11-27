@@ -118,14 +118,14 @@ try {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
                     New-ADOU -OUName $Departement[1] -BaseDN "DC=belgique,DC=lan"
-                    New-ADGG -GGName "GG-responsable-$($Departement[1])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-responsable-$($Departement[1])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
 
                 if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
                     $baseDN = "OU=" + $Departement[1] + ",DC=belgique,DC=lan".Trim()
                     New-ADOU -OUName $Departement[0].Trim() -BaseDN $BaseDN
-                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                     $depHead = $true
                 }
                 $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=belgique,DC=lan").Trim()
@@ -133,7 +133,7 @@ try {
                 if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
                     New-ADOU -OUName $Departement[0] -BaseDN "DC=belgique,DC=lan"
-                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
                 $parsedDN = ("OU=" + $Departement[0] + ",DC=belgique,DC=lan").Trim()
             }
