@@ -4,18 +4,18 @@ Import-Module ActiveDirectory
 function New-ADGG {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$GGName,
+        [string]$GName,
         [Parameter(Mandatory=$true)]
         [string]$BaseDN
     )
     try {
-        $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
-        if($null -eq $GG) {
-            Write-Host "Création du groupe $GGName"
-            New-ADGroup -Name "$GGName" -Path "$BaseDN" -GroupCategory Security -GroupScope Global
+        $GN = Get-ADGroup -Filter { Name -eq $GName } -SearchBase $BaseDN
+        if($null -eq $GN) {
+            Write-Host "Création du groupe $GName"
+            New-ADGroup -Name "$GName" -Path "$BaseDN" -GroupCategory Security -GroupScope Global
         }
         else {
-            Write-Host "Le groupe $GGName existe déja."
+            Write-Host "Le groupe $GName existe déja."
         }
     }
     catch {
@@ -101,161 +101,117 @@ try {
         }
     }
 
-    foreach ($User in $Users)
-    {
+    foreach ($User in $Users) {
+        $depHead = $false
         $parsedDN = ""
         $UserUPNSuffix = ""
 
-        Write-Host "`nTraitement de l'utilisateur : $( $User.Prenom ) $( $User.Nom )"
-        Write-Host "Département : $( $User.Departement )"
-        if (![string]::IsNullOrWhiteSpace($User.Departement))
-        {
+        Write-Host "`nTraitement de l'utilisateur : $($User.Prenom) $($User.Nom)"
+        Write-Host "Département : $($User.Departement)"
+        if (![string]::IsNullOrWhiteSpace($User.Departement)) {
             $Departement = $User.Departement
             $Departement = $Departement.Trim()
             $Departement = $Departement.ToLower()
             $Departement = $Departement -split "/"
-            if ($Departement.Count -gt 1)
-            {
-                if ($DepList -notcontains $Departement[1])
-                {
+            if ($Departement.Count -gt 1) {
+                if ($DepList -notcontains $Departement[1]) {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
                     New-ADOU -OUName $Departement[1] -BaseDN "DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-responsable-$($Departement[1])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
 
-                if ($DepList -notcontains $Departement[0])
-                {
+                if ($DepList -notcontains $Departement[0]) {
                     $DepList += $Departement[0]
                     $baseDN = "OU=" + $Departement[1] + ",DC=belgique,DC=lan".Trim()
                     New-ADOU -OUName $Departement[0].Trim() -BaseDN $BaseDN
-                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    $depHead = $true
                 }
                 $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=belgique,DC=lan").Trim()
             } else {
                 if ($DepList -notcontains $Departement[0]) {
-                $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=astral,DC=lan").Trim()
-            }
-            else
-            {
-                if ($DepList -notcontains $Departement[0])
-                {
                     $DepList += $Departement[0]
                     New-ADOU -OUName $Departement[0] -BaseDN "DC=belgique,DC=lan"
-                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    New-ADGG -gname "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
                 $parsedDN = ("OU=" + $Departement[0] + ",DC=belgique,DC=lan").Trim()
             }
 
-            $GGName = "GG-$($Departement[0])"
+            if($depHead -eq $false) {
+                $GGName = "GG-$($Departement[0])"
+            } else {
+                $GGName = "GG-responsable-$($Departement[1])"
+            }
             switch -Wildcard ($User.Departement) {
-            "*Ressources humaines*" { 
-                $UserUPNSuffix = "rh.lan" 
-            }
-            "*R&D*" { 
-                $UserUPNSuffix = "r&d.lan" 
-            }
-            "*Marketing*" { 
-                $UserUPNSuffix = "marketing.lan" 
-            }
-            "*Finances*" { 
-                $UserUPNSuffix = "finance.lan" 
-            }
-            "*Technique*" { 
-                $UserUPNSuffix = "technique.lan" 
-            }
-            "*Commerciaux*" { 
-                $UserUPNSuffix = "commercial.lan" 
-            }
-            "*Informatique*" { 
-                $UserUPNSuffix = "it.lan" 
-            }
-            "Direction" { 
-                $GGName="GG-direction"
-                $UserUPNSuffix = "direction.lan" 
-            }
+                "*Ressources humaines*" { 
+                    $UserUPNSuffix = "rh.lan"
+                }
+                "*R&D*" { 
+                    $UserUPNSuffix = "r&d.lan"
+                }
+                "*Marketing*" { 
+                    $UserUPNSuffix = "marketing.lan" 
+                }
+                "*Finances*" { 
+                    $UserUPNSuffix = "finance.lan" 
+                }
+                "*Technique*" { 
+                    $UserUPNSuffix = "technique.lan" 
+                }
+                "*Commerciaux*" { 
+                    $UserUPNSuffix = "commercial.lan" 
+                }
+                "*Informatique*" { 
+                    $UserUPNSuffix = "it.lan" 
+                }
+                "Direction" { 
+                    $GGName="GG-direction"
+                    $UserUPNSuffix = "direction.lan" 
+                }
             default { 
-        }switch -Wildcard ($User.Departement)
-        {
-            "*Ressources humaines*" {
-                $GGName = "Ressources Humaines"
-                $UserUPNSuffix = "rh.lan"
-            }
-            "*R&D*" {
-                $GGName = "R&D"
-                $UserUPNSuffix = "r&d.lan"
-            }
-            "*Marketing*" {
-                $GGName = "Marketing"; $UserUPNSuffix = "marketing.lan"
-            }
-            "*Finances*" {
-                $GGName = "Finances"; $UserUPNSuffix = "finance.lan"
-            }
-            "*Technique*" {
-                $GGName = "Technique"; $UserUPNSuffix = "technique.lan"
-            }
-            "*Commerciaux*" {
-                $GGName = "Commerciaux"; $UserUPNSuffix = "commercial.lan"
-            }
-            "*Informatique*" {
-                $GGName = "Informatique"; $UserUPNSuffix = "it.lan"
-            }
-            "Direction" {
-                $GGName = "Direction"; $UserUPNSuffix = "direction.lan"
-            }
-            default {
                 Write-Warning "Département non reconnu: '$Departement'"
                 $UserUPNSuffix = "belgique.lan"
             }
         }
 
-        if ($AvailableUPN -notcontains $UserUPNSuffix)
-        {
-            try
-            {
-                Get-ADForest | Set-ADForest -UPNSuffixes @{ add = $UserUPNSuffix }
+        if ($AvailableUPN -notcontains $UserUPNSuffix) {
+            try {
+                Get-ADForest | Set-ADForest -UPNSuffixes @{add=$UserUPNSuffix}
                 $AvailableUPN += $UserUPNSuffix
                 Write-Host "UPN '$UserUPNSuffix' ajouté à la forêt"
             }
-            catch
-            {
+            catch {
                 Write-Error "Erreur lors de la création de l'UPN : $_"
                 continue
-            }
-
+            }   
         }
-        else
-        {
-            Write-Warning "Département manquant pour $( $User.Prenom ) $( $User.Nom )"
+        } else {
+            Write-Warning "Département manquant pour $($User.Prenom) $($User.Nom)"
             continue
         }
 
         $firstname = $User.Prenom
         $lastname = $User.Nom
         $baseUPN = $lastname.ToLower() + "." + $firstname.ToLower()
-        if ($baseUPN.Length -gt 20)
-        {
+        if ($baseUPN.Length -gt 20) {
             Write-Warning "UPN trop long pour $FirstName $LastName : $baseUPN"
-            $baseUPN = "$($FirstName.Substring(0, 1) ).$( $LastName )".ToLower()
-
+            $baseUPN = "$($FirstName.Substring(0,1)).$($LastName)".ToLower()
+            
             # Si toujours trop long, tronquer à 20 caractères
-            if ($baseUPN.Length -gt 20)
-            {
+            if ($baseUPN.Length -gt 20) {
                 $baseUPN = $baseUPN.Substring(0, 20)
             }
         }
-        if ($UserUPNSuffix -eq "direction.lan")
-        {
+        if($UserUPNSuffix -eq "direction.lan") {
             $password = New-RandomPassword -Length 16 -Uppercase 2 -Digits 2 -SpecialCharacters 2
 
-        }
-        else
-        {
+        } else {
             $password = New-RandomPassword -Length 7 -Uppercase 1 -Digits 2 -SpecialCharacters 1
         }
-        if ($Blacklist -contains "$( $User.Nom ) $( $User.Prenom )")
-        {
-            Write-Warning "Doublon détecté pour $( $User.Prenom ) $( $User.Nom )"
-            Add-Content -Path ".\duplicate.txt" -Value "Nom Prénom: $( $User.Nom ) $( $User.Prenom )\nDN: $parsedDN\nCouple Généré: $baseUPN@$UserUPNSuffix : $password"
+        if($Blacklist -contains "$($User.Nom) $($User.Prenom)") {
+            Write-Warning "Doublon détecté pour $($User.Prenom) $($User.Nom)"
+            Add-Content -Path ".\duplicate.txt" -Value "Nom Prénom: $($User.Nom) $($User.Prenom)\nDN: $parsedDN\nCouple Généré: $baseUPN@$UserUPNSuffix : $password"
         }
         try {
             New-ADUser -UserPrincipalName "$baseUPN@$UserUPNSuffix" -Name "$firstname $lastname" -GivenName $firstname -Surname $lastname -SamAccountName $baseUPN -DisplayName "$firstname $lastname" -Path $parsedDN -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) -Enabled $true -OtherAttributes @{'ipPhone' = $User.NInterne} -Description $User.Description -Office $User.Bureau
@@ -263,16 +219,6 @@ try {
             Write-Host "Utilisateur $($User.Prenom) $($User.Nom) créé" 
             Add-Content -Path ".\passwords.txt" -Value "$baseUPN@$UserUPNSuffix : $password"
         } catch {
-        try
-        {
-            New-ADUser -UserPrincipalName "$baseUPN@$UserUPNSuffix" -Name "$firstname $lastname" -GivenName $firstname -Surname $lastname -SamAccountName $baseUPN -DisplayName "$firstname $lastname" -Path $parsedDN -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) -Enabled $true -OtherAttributes @{ 'ipPhone' = $User.NInterne } -Description $User.Description -Office $User.Bureau
-            Write-Host "Utilisateur $( $User.Prenom ) $( $User.Nom ) créé"
-            Add-Content -Path ".\passwords.txt" -Value "$baseUPN@$UserUPNSuffix : $password"
-
-            Add-AdGroupMember -Identity "GG-$GGName" -Members "$baseUPN"
-        }
-        catch
-        {
             Write-Error "Erreur lors de la création de l'utilisateur $baseUPN : $_"
         }
     }
