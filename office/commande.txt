@@ -1,0 +1,6 @@
+.\download-office.ps1
+puis 
+.\create-gpo.ps1
+
+
+donc faut d'abord reprendre l'installation de la suite office et ça risque de prendre du temps

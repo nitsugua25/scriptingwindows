@@ -1,0 +1,10 @@
+<Configuration>
+  <!-- Changer sourcePath pour le partage !!!!!!!!!!!!!!!!!! -->
+  <Add SourcePath="\\server\share\Office" OfficeClientEdition="64" Channel="Monthly">
+    <Product ID="O365ProPlusRetail">
+      <Language ID="fr-fr" />
+    </Product>
+  </Add>
+  <Display Level="None" AcceptEULA="TRUE" />
+  <Property Name="AUTOACTIVATE" Value="1" />
+</Configuration>
