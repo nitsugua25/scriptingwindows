@@ -1,27 +1,28 @@
 # Import du module AD
 Import-Module ActiveDirectory
-function New-ADGG{
-    param(
+
+function New-ADGG {
+    param (
         [Parameter(Mandatory=$true)]
         [string]$GGName,
         [Parameter(Mandatory=$true)]
         [string]$BaseDN
     )
-
     try {
         $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
         if($null -eq $GG) {
-            Write-Host "Création du groupe global $GGName"
-            New-ADGroup "GG-$GGName" -GroupCategory Security -GroupScope Global -Path "$BaseDN"
+            Write-Host "Création du groupe $GGName"
+            New-ADGroup -Name "$GGName" -Path "$BaseDN" -GroupCategory Security -GroupScope Global
         }
         else {
-            Write-Host "Le groupe global $GGName existe déja."
+            Write-Host "Le groupe $GGName existe déja."
         }
-
-    } catch {
-        Write-Error "Erreur lors de la création du groupe global $GGName : $_"
+    }
+    catch {
+        Write-Error "Erreur lors de la création de l'OU $OUName : $_"
     }
 }
+
 function New-ADOU {
     param(
         [Parameter(Mandatory=$true)]
@@ -80,10 +81,9 @@ function New-RandomPassword {
 
 # Programme principal
 try {
-    New-ADOU -OUName "Groupes" -BaseDN "DC=astral,DC=lan"
-    New-ADOU -OUName "Groupes Globaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
-    New-ADOU -OUName "Groupes Locaux" -BaseDN "OU=Groupes,DC=astral,DC=lan"
-
+    New-ADOU -OUName "Groupes" -BaseDN "DC=belgique,DC=lan"
+    New-ADOU -OUName "Groupes Globaux" -BaseDN "OU=Groupes,DC=belgique,DC=lan"
+    New-ADOU -OUName "Groupes Locaux" -BaseDN "OU=Groupes,DC=belgique,DC=lan"
 
     Write-Host "Lecture du fichier CSV..."
     $Users = Import-Csv -Path ".\output.csv" -Encoding UTF8
@@ -105,7 +105,6 @@ try {
     {
         $parsedDN = ""
         $UserUPNSuffix = ""
-        $GGName = ""
 
         Write-Host "`nTraitement de l'utilisateur : $( $User.Prenom ) $( $User.Nom )"
         Write-Host "Département : $( $User.Departement )"
@@ -121,16 +120,19 @@ try {
                 {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
-                    New-ADOU -OUName $Departement[1] -BaseDN "DC=astral,DC=lan"
-                    New-ADGG -GGName $Departement[1] -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
+                    New-ADOU -OUName $Departement[1] -BaseDN "DC=belgique,DC=lan"
                 }
 
                 if ($DepList -notcontains $Departement[0])
                 {
                     $DepList += $Departement[0]
-                    $baseDN = "OU=" + $Departement[1] + ",DC=astral,DC=lan".Trim()
+                    $baseDN = "OU=" + $Departement[1] + ",DC=belgique,DC=lan".Trim()
                     New-ADOU -OUName $Departement[0].Trim() -BaseDN $BaseDN
+                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
+                $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=belgique,DC=lan").Trim()
+            } else {
+                if ($DepList -notcontains $Departement[0]) {
                 $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=astral,DC=lan").Trim()
             }
             else
@@ -138,12 +140,40 @@ try {
                 if ($DepList -notcontains $Departement[0])
                 {
                     $DepList += $Departement[0]
-                    New-ADOU -OUName $Departement[0] -BaseDN "DC=astral,DC=lan"
-                    New-ADGG -GGName $Departement[0] -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=astral,DC=lan"
+                    New-ADOU -OUName $Departement[0] -BaseDN "DC=belgique,DC=lan"
+                    New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
-                $parsedDN = ("OU=" + $Departement[0] + ",DC=astral,DC=lan").Trim()
+                $parsedDN = ("OU=" + $Departement[0] + ",DC=belgique,DC=lan").Trim()
             }
 
+            $GGName = "GG-$($Departement[0])"
+            switch -Wildcard ($User.Departement) {
+            "*Ressources humaines*" { 
+                $UserUPNSuffix = "rh.lan" 
+            }
+            "*R&D*" { 
+                $UserUPNSuffix = "r&d.lan" 
+            }
+            "*Marketing*" { 
+                $UserUPNSuffix = "marketing.lan" 
+            }
+            "*Finances*" { 
+                $UserUPNSuffix = "finance.lan" 
+            }
+            "*Technique*" { 
+                $UserUPNSuffix = "technique.lan" 
+            }
+            "*Commerciaux*" { 
+                $UserUPNSuffix = "commercial.lan" 
+            }
+            "*Informatique*" { 
+                $UserUPNSuffix = "it.lan" 
+            }
+            "Direction" { 
+                $GGName="GG-direction"
+                $UserUPNSuffix = "direction.lan" 
+            }
+            default { 
         }switch -Wildcard ($User.Departement)
         {
             "*Ressources humaines*" {
@@ -227,6 +257,12 @@ try {
             Write-Warning "Doublon détecté pour $( $User.Prenom ) $( $User.Nom )"
             Add-Content -Path ".\duplicate.txt" -Value "Nom Prénom: $( $User.Nom ) $( $User.Prenom )\nDN: $parsedDN\nCouple Généré: $baseUPN@$UserUPNSuffix : $password"
         }
+        try {
+            New-ADUser -UserPrincipalName "$baseUPN@$UserUPNSuffix" -Name "$firstname $lastname" -GivenName $firstname -Surname $lastname -SamAccountName $baseUPN -DisplayName "$firstname $lastname" -Path $parsedDN -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) -Enabled $true -OtherAttributes @{'ipPhone' = $User.NInterne} -Description $User.Description -Office $User.Bureau
+            Add-ADGroupMember -Identity "$GGName" -Members $baseUPN
+            Write-Host "Utilisateur $($User.Prenom) $($User.Nom) créé" 
+            Add-Content -Path ".\passwords.txt" -Value "$baseUPN@$UserUPNSuffix : $password"
+        } catch {
         try
         {
             New-ADUser -UserPrincipalName "$baseUPN@$UserUPNSuffix" -Name "$firstname $lastname" -GivenName $firstname -Surname $lastname -SamAccountName $baseUPN -DisplayName "$firstname $lastname" -Path $parsedDN -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) -Enabled $true -OtherAttributes @{ 'ipPhone' = $User.NInterne } -Description $User.Description -Office $User.Bureau
