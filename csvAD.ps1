@@ -4,18 +4,18 @@ Import-Module ActiveDirectory
 function New-ADGG {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$GGName,
+        [string]$GName,
         [Parameter(Mandatory=$true)]
         [string]$BaseDN
     )
     try {
-        $GG = Get-ADGroup -Filter { Name -eq $GGName } -SearchBase $BaseDN
-        if($null -eq $GG) {
-            Write-Host "Création du groupe $GGName"
-            New-ADGroup -Name "$GGName" -Path "$BaseDN" -GroupCategory Security -GroupScope Global
+        $GN = Get-ADGroup -Filter { Name -eq $GName } -SearchBase $BaseDN
+        if($null -eq $GN) {
+            Write-Host "Création du groupe $GName"
+            New-ADGroup -Name "$GName" -Path "$BaseDN" -GroupCategory Security -GroupScope Global
         }
         else {
-            Write-Host "Le groupe $GGName existe déja."
+            Write-Host "Le groupe $GName existe déja."
         }
     }
     catch {
@@ -102,6 +102,7 @@ try {
     }
 
     foreach ($User in $Users) {
+        $depHead = $false
         $parsedDN = ""
         $UserUPNSuffix = ""
 
@@ -117,6 +118,7 @@ try {
                     $DepList += $Departement[1]
                     Write-Host ("Création de l'OU " + $Departement[1])
                     New-ADOU -OUName $Departement[1] -BaseDN "DC=belgique,DC=lan"
+                    New-ADGG -GGName "GG-responsable-$($Departement[1])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
                 }
 
                 if ($DepList -notcontains $Departement[0]) {
@@ -124,6 +126,7 @@ try {
                     $baseDN = "OU=" + $Departement[1] + ",DC=belgique,DC=lan".Trim()
                     New-ADOU -OUName $Departement[0].Trim() -BaseDN $BaseDN
                     New-ADGG -GGName "GG-$($Departement[0])" -BaseDN "OU=Groupes Globaux,OU=Groupes,DC=belgique,DC=lan"
+                    $depHead = $true
                 }
                 $ParsedDN = ("OU=" + $Departement[0] + ",OU=" + $Departement[1] + ",DC=belgique,DC=lan").Trim()
             } else {
@@ -135,33 +138,37 @@ try {
                 $parsedDN = ("OU=" + $Departement[0] + ",DC=belgique,DC=lan").Trim()
             }
 
-            $GGName = "GG-$($Departement[0])"
+            if($depHead -eq $false) {
+                $GGName = "GG-$($Departement[0])"
+            } else {
+                $GGName = "GG-responsable-$($Departement[1])"
+            }
             switch -Wildcard ($User.Departement) {
-            "*Ressources humaines*" { 
-                $UserUPNSuffix = "rh.lan" 
-            }
-            "*R&D*" { 
-                $UserUPNSuffix = "r&d.lan" 
-            }
-            "*Marketing*" { 
-                $UserUPNSuffix = "marketing.lan" 
-            }
-            "*Finances*" { 
-                $UserUPNSuffix = "finance.lan" 
-            }
-            "*Technique*" { 
-                $UserUPNSuffix = "technique.lan" 
-            }
-            "*Commerciaux*" { 
-                $UserUPNSuffix = "commercial.lan" 
-            }
-            "*Informatique*" { 
-                $UserUPNSuffix = "it.lan" 
-            }
-            "Direction" { 
-                $GGName="GG-direction"
-                $UserUPNSuffix = "direction.lan" 
-            }
+                "*Ressources humaines*" { 
+                    $UserUPNSuffix = "rh.lan"
+                }
+                "*R&D*" { 
+                    $UserUPNSuffix = "r&d.lan"
+                }
+                "*Marketing*" { 
+                    $UserUPNSuffix = "marketing.lan" 
+                }
+                "*Finances*" { 
+                    $UserUPNSuffix = "finance.lan" 
+                }
+                "*Technique*" { 
+                    $UserUPNSuffix = "technique.lan" 
+                }
+                "*Commerciaux*" { 
+                    $UserUPNSuffix = "commercial.lan" 
+                }
+                "*Informatique*" { 
+                    $UserUPNSuffix = "it.lan" 
+                }
+                "Direction" { 
+                    $GGName="GG-direction"
+                    $UserUPNSuffix = "direction.lan" 
+                }
             default { 
                 Write-Warning "Département non reconnu: '$Departement'"
                 $UserUPNSuffix = "belgique.lan"
