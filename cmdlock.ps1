@@ -2,8 +2,8 @@
 Import-Module GroupPolicy
 
 # Variables - Replace these with your actual environment details
-$domain = 'forest.com'  # Your domain name
-$ouInformatique = 'OU=informatique,DC=forest,DC=com'  # OU where CMD and Control Panel will be enabled
+$domain = 'belgique.lan'  # Your domain name
+$ouInformatique = 'OU=informatique,DC=belgique,DC=lan'  # OU where CMD and Control Panel will be enabled
 
 # Define GPO names
 $gpoName_Disable = 'Disable CMD and Control Panel Globally'
@@ -25,7 +25,7 @@ Set-GPRegistryValue -Name $gpoName_Disable -Key 'HKCU\Software\Microsoft\Windows
     -ValueName 'NoControlPanel' -Type DWord -Value 1
 
 # Link the Global Disable GPO to the domain root
-New-GPLink -Name $gpoName_Disable -Target "DC=forest,DC=com" -LinkEnabled Yes
+New-GPLink -Name $gpoName_Disable -Target "DC=belgique,DC=lan" -LinkEnabled Yes
 Write-Host "Linked GPO '$gpoName_Disable' to the domain root"
 
 # Step 2: Create or Retrieve the Enable GPO for Informatique
